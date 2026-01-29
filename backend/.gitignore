@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST.in
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# FastAPI
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Selenium drivers
+chromedriver
+chromedriver.exe
+geckodriver
+geckodriver.exe
+
+# Excel files (uploaded data)
+excel_files/*.xlsx
+excel_files/*.xls
+excel_files/*.csv
+!excel_files/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

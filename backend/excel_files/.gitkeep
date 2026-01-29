@@ -1,0 +1,2 @@
+# This file ensures the excel_files directory is tracked by git
+# while ignoring the actual Excel files uploaded by users
