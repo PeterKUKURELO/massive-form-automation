@@ -115,6 +115,24 @@ export default function ExcelProcessor() {
                     setTotal(parsed.total)
                 }
 
+                if (parsed.evento === "error") {
+                    alert(`❌ Error: ${parsed.mensaje}`)
+                    setIsProcessing(false)
+                    return
+                }
+
+                if (parsed.evento === "batch_inicio") {
+                    console.log(`🔄 Procesando lote: ${parsed.lote}`)
+                }
+
+                if (parsed.evento === "batch_pausa") {
+                    console.log(`⏸️ ${parsed.mensaje}`)
+                }
+
+                if (parsed.evento === "error_batch") {
+                    console.error(`❌ ${parsed.mensaje}`)
+                }
+
                 if (parsed.evento === "procesando") {
                     setProgress(
                         parsed.index && total > 0 ? (parsed.index / total) * 100 : 0
@@ -166,7 +184,7 @@ export default function ExcelProcessor() {
                             <Upload className="w-5 h-5" />
                             Subir archivo
                         </CardTitle>
-                        <CardDescription>Archivo Excel (.xlsx)</CardDescription>
+                        <CardDescription>Archivo Excel (.xlsx) - Máximo 200 registros</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Form {...form}>
@@ -222,9 +240,16 @@ export default function ExcelProcessor() {
                             </Button>
 
                             {total > 0 && (
-                                <span className="text-sm text-muted-foreground">
-                  Total registros: {total}
-                </span>
+                                <div className="flex items-center gap-4">
+                                    <span className="text-sm text-muted-foreground">
+                                        Total registros: {total}
+                                    </span>
+                                    {total > 200 && (
+                                        <Badge variant="destructive">
+                                            ⚠️ Excede límite (200 max)
+                                        </Badge>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </CardContent>

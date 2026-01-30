@@ -6,3 +6,4 @@ pandas
 selenium
 openpyxl
 sse-starlette
+psutil

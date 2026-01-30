@@ -4,14 +4,16 @@ import asyncio
 import time
 from excel_reader import leer_excel
 from utils import generar_fecha_lima, formatear_fecha_selva, generar_correo
+from config import (
+    MAX_REGISTROS, BATCH_SIZE, BATCH_DELAY, FORM_URL,
+    SELENIUM_TIMEOUT, FORM_DELAY, CHROME_OPTIONS, SCREENSHOTS_DIR
+)
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
-
-FORM_URL = "https://survey.alchemer.com/s3/6972673/hospital-program-form"
 
 
 # ─────────────────────────────────────────────
@@ -31,10 +33,9 @@ def iniciar_driver(headless=False):
             options.add_argument("--headless")
         service = Service()
 
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
+    # Aplicar opciones optimizadas
+    for option in CHROME_OPTIONS:
+        options.add_argument(option)
 
     return webdriver.Chrome(service=service, options=options)
 
@@ -43,13 +44,12 @@ def iniciar_driver(headless=False):
 # Envío de formulario
 # ─────────────────────────────────────────────
 
-def enviar_formulario(registro, headless=False):
-    driver = iniciar_driver(headless)
-
+def enviar_formulario_con_driver(driver, registro):
+    """Envía un formulario usando un driver existente"""
     try:
         driver.get(FORM_URL)
 
-        WebDriverWait(driver, 20).until(
+        WebDriverWait(driver, SELENIUM_TIMEOUT).until(
             EC.presence_of_element_located((By.NAME, "sgE-6972673-1-74"))
         )
 
@@ -109,7 +109,7 @@ def enviar_formulario(registro, headless=False):
         ).click()
 
         # Submit robusto
-        submit_btn = WebDriverWait(driver, 20).until(
+        submit_btn = WebDriverWait(driver, SELENIUM_TIMEOUT).until(
             EC.element_to_be_clickable((By.ID, "sg_SubmitButton"))
         )
 
@@ -124,7 +124,7 @@ def enviar_formulario(registro, headless=False):
         except Exception:
             driver.execute_script("arguments[0].click();", submit_btn)
 
-        WebDriverWait(driver, 20).until(
+        WebDriverWait(driver, SELENIUM_TIMEOUT).until(
             EC.visibility_of_element_located(
                 (By.XPATH, "//h2[contains(text(), 'Thank You!')]")
             )
@@ -134,15 +134,21 @@ def enviar_formulario(registro, headless=False):
 
     except Exception as e:
         try:
-            os.makedirs("/app/screenshots", exist_ok=True)
+            os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
             driver.save_screenshot(
-                f"/app/screenshots/error_{int(time.time() * 1000)}.png"
+                f"{SCREENSHOTS_DIR}/error_{int(time.time() * 1000)}.png"
             )
         except Exception:
             pass
 
         return {"success": False, "error": str(e)}
 
+
+def enviar_formulario(registro, headless=False):
+    """Función legacy - mantener compatibilidad"""
+    driver = iniciar_driver(headless)
+    try:
+        return enviar_formulario_con_driver(driver, registro)
     finally:
         driver.quit()
 
@@ -155,24 +161,69 @@ async def procesar_excel_streaming(path, headless=False):
     registros = leer_excel(path)
     total = len(registros)
 
+    # 🚨 LÍMITE CRÍTICO
+    if total > MAX_REGISTROS:
+        yield json.dumps({
+            "evento": "error",
+            "mensaje": f"Máximo {MAX_REGISTROS} registros por carga. Archivo tiene {total} registros."
+        })
+        return
+
     yield json.dumps({"evento": "inicio", "total": total})
 
-    for i, registro in enumerate(registros):
+    # 🔄 PROCESAMIENTO POR LOTES
+    for batch_start in range(0, total, BATCH_SIZE):
+        batch_end = min(batch_start + BATCH_SIZE, total)
+        batch = registros[batch_start:batch_end]
+        
         yield json.dumps({
-            "evento": "procesando",
-            "index": i + 1,
-            "nombre": f"{registro['Nombre']} {registro['Apellido']}"
+            "evento": "batch_inicio",
+            "lote": f"{batch_start + 1}-{batch_end} de {total}"
         })
 
-        resultado = await asyncio.to_thread(
-            enviar_formulario, registro, headless
-        )
+        # 🎯 UN DRIVER POR LOTE
+        driver = None
+        try:
+            driver = iniciar_driver(headless)
+            
+            for i, registro in enumerate(batch):
+                index_global = batch_start + i + 1
+                
+                yield json.dumps({
+                    "evento": "procesando",
+                    "index": index_global,
+                    "nombre": f"{registro['Nombre']} {registro['Apellido']}"
+                })
 
-        yield json.dumps({
-            "evento": "resultado",
-            "index": i + 1,
-            "nombre": f"{registro['Nombre']} {registro['Apellido']}",
-            **resultado
-        })
+                resultado = await asyncio.to_thread(
+                    enviar_formulario_con_driver, driver, registro
+                )
 
-        await asyncio.sleep(0.05)
+                yield json.dumps({
+                    "evento": "resultado",
+                    "index": index_global,
+                    "nombre": f"{registro['Nombre']} {registro['Apellido']}",
+                    **resultado
+                })
+
+                await asyncio.sleep(FORM_DELAY)
+                
+        except Exception as e:
+            yield json.dumps({
+                "evento": "error_batch",
+                "mensaje": f"Error en lote {batch_start + 1}-{batch_end}: {str(e)}"
+            })
+        finally:
+            if driver:
+                try:
+                    driver.quit()
+                except Exception:
+                    pass
+
+        # 💤 DESCANSO ENTRE LOTES
+        if batch_end < total:
+            yield json.dumps({
+                "evento": "batch_pausa",
+                "mensaje": f"Pausa {BATCH_DELAY}s antes del siguiente lote..."
+            })
+            await asyncio.sleep(BATCH_DELAY)
