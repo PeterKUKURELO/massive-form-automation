@@ -186,15 +186,23 @@ El backend normaliza `Zona` en mayusculas y aplica este mapeo:
 | Zona | Codigo enviado | Departamento seleccionado |
 | --- | --- | --- |
 | `LIMA` | `LIMVMJ02` | `Lima (departamento)` |
+| `LIMA 2` | `LIMVMJ02` | `Lima (departamento)` |
+| `LIMA 3` | `LIMVMJ03` | `Lima (departamento)` |
+| `LIMA 4` | `LIMVMJ04` | `Lima (departamento)` |
+| `LIMA 6` | `LIMVMJ06` | `Lima (departamento)` |
 | `CUSCO` | `CUSVMJ` | `Cusco` |
 | `CHICLAYO` | `CIXVMJ` | `Lambayeque` |
+| `AREQUIPA` | `AQPVMJ` | `Arequipa` |
+| `TRUJILLO 1` | `TRUVMJ` | `La Libertad` |
+| `TRUJILLO 2` | `TRUVMJ2` | `La Libertad` |
+| `SELVA` | `SELVMJ` | `Amazonas` |
 | cualquier otra zona | `SELVMJ` | `Amazonas` |
 
 Comportamiento adicional:
 
-- `LIMA`: genera una fecha aleatoria de 2025 hasta la fecha actual.
+- `LIMA`, `LIMA 2`, `LIMA 3`, `LIMA 4` y `LIMA 6`: generan una fecha aleatoria de 2025 hasta la fecha actual.
 - Otras zonas: usa `Fecha de Nacimiento` del Excel.
-- `LIMA`: siempre marca la opcion equivalente a primer hijo.
+- `LIMA`, `LIMA 2`, `LIMA 3`, `LIMA 4` y `LIMA 6`: siempre marcan la opcion equivalente a primer hijo.
 - Otras zonas: respeta `Es Primer Hijo`.
 - El correo se genera automaticamente como `${numero}@nogmail.com`.
 
@@ -273,7 +281,7 @@ python monitor.py clean
 
 Este README ya contempla:
 
-- soporte para `LIMA`, `CUSCO` y `CHICLAYO`
+- soporte para `LIMA`, `LIMA 2`, `LIMA 3`, `LIMA 4`, `LIMA 6`, `CUSCO`, `CHICLAYO`, `AREQUIPA`, `TRUJILLO 1`, `TRUJILLO 2` y `SELVA`
 - fallback a `SELVMJ` para otras zonas
 - mapeo de departamentos actualizado
 - ejecucion recomendada con Docker

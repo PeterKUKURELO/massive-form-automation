@@ -15,6 +15,36 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 
+CODIGOS_POR_ZONA = {
+    "LIMA": "LIMVMJ02",
+    "LIMA 2": "LIMVMJ02",
+    "LIMA 3": "LIMVMJ03",
+    "LIMA 4": "LIMVMJ04",
+    "LIMA 6": "LIMVMJ06",
+    "CUSCO": "CUSVMJ",
+    "CHICLAYO": "CIXVMJ",
+    "AREQUIPA": "AQPVMJ",
+    "TRUJILLO 1": "TRUVMJ",
+    "TRUJILLO 2": "TRUVMJ2",
+    "SELVA": "SELVMJ",
+}
+
+DEPARTAMENTOS_POR_ZONA = {
+    "LIMA": "Lima (departamento)",
+    "LIMA 2": "Lima (departamento)",
+    "LIMA 3": "Lima (departamento)",
+    "LIMA 4": "Lima (departamento)",
+    "LIMA 6": "Lima (departamento)",
+    "CUSCO": "Cusco",
+    "CHICLAYO": "Lambayeque",
+    "AREQUIPA": "Arequipa",
+    "TRUJILLO 1": "La Libertad",
+    "TRUJILLO 2": "La Libertad",
+    "SELVA": "Amazonas",
+}
+
+ZONAS_LIMA = {"LIMA", "LIMA 2", "LIMA 3", "LIMA 4", "LIMA 6"}
+
 
 # ─────────────────────────────────────────────
 # Driver
@@ -56,11 +86,7 @@ def enviar_formulario_con_driver(driver, registro):
         )
 
         # Código
-        codigo = {
-            "LIMA": "LIMVMJ02",
-            "CUSCO": "CUSVMJ",
-            "CHICLAYO": "CIXVMJ",
-        }.get(zona, "SELVMJ")
+        codigo = CODIGOS_POR_ZONA.get(zona, "SELVMJ")
         driver.find_element(By.NAME, "sgE-6972673-1-74").send_keys(codigo)
 
         # Datos personales
@@ -68,7 +94,7 @@ def enviar_formulario_con_driver(driver, registro):
         driver.find_element(By.NAME, "sgE-6972673-1-51").send_keys(registro["Apellido"])
 
         # Zona / fecha
-        if zona == "LIMA":
+        if zona in ZONAS_LIMA:
             driver.find_element(
                 By.CSS_SELECTOR, 'label[for="sgE-6972673-1-77-10128"]'
             ).click()
@@ -97,11 +123,7 @@ def enviar_formulario_con_driver(driver, registro):
         driver.find_element(By.NAME, "sgE-6972673-1-54").send_keys(registro["Numero"])
 
         # Departamento
-        departamento = {
-            "LIMA": "Lima (departamento)",
-            "CUSCO": "Cusco",
-            "CHICLAYO": "Lambayeque",
-        }.get(zona, "Amazonas")
+        departamento = DEPARTAMENTOS_POR_ZONA.get(zona, "Amazonas")
 
         Select(
             driver.find_element(By.NAME, "sgE-6972673-1-64")

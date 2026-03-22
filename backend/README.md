@@ -86,17 +86,24 @@ curl -X POST "http://localhost:8000/upload/" \
 
 ## 🎯 Funcionalidades por Zona
 
-### Lima
-- Código: `LIMVMJ02`
-- Fecha: Generada aleatoriamente en 2025
-- Departamento: Lima
-- Siempre marca "Es primer hijo"
+### Zonas Lima
+- `LIMA` y `LIMA 2`: código `LIMVMJ02`
+- `LIMA 3`: código `LIMVMJ03`
+- `LIMA 4`: código `LIMVMJ04`
+- `LIMA 6`: código `LIMVMJ06`
+- Departamento: `Lima (departamento)`
+- Fecha: generada aleatoriamente en 2025
+- Siempre marca la opcion equivalente a "Es primer hijo"
 
-### Selva
-- Código: `SELVMJ`
-- Fecha: Usa la fecha de nacimiento del Excel
-- Departamento: Amazonas
-- Respeta el campo "Es Primer Hijo"
+### Otras zonas configuradas
+- `CUSCO`: código `CUSVMJ`, departamento `Cusco`
+- `CHICLAYO`: código `CIXVMJ`, departamento `Lambayeque`
+- `AREQUIPA`: código `AQPVMJ`, departamento `Arequipa`
+- `TRUJILLO 1`: código `TRUVMJ`, departamento `La Libertad`
+- `TRUJILLO 2`: código `TRUVMJ2`, departamento `La Libertad`
+- `SELVA`: código `SELVMJ`, departamento `Amazonas`
+- Otras zonas: fallback a código `SELVMJ` y departamento `Amazonas`
+- Para zonas no Lima, la fecha usa `Fecha de Nacimiento` y respeta `Es Primer Hijo`
 
 ## 📡 API Endpoints
 
