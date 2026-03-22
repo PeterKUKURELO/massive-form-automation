@@ -47,6 +47,8 @@ def iniciar_driver(headless=False):
 def enviar_formulario_con_driver(driver, registro):
     """Envía un formulario usando un driver existente"""
     try:
+        zona = str(registro.get("Zona", "")).strip().upper()
+
         driver.get(FORM_URL)
 
         WebDriverWait(driver, SELENIUM_TIMEOUT).until(
@@ -54,7 +56,11 @@ def enviar_formulario_con_driver(driver, registro):
         )
 
         # Código
-        codigo = "LIMVMJ02" if registro["Zona"] == "LIMA" else "SELVMJ"
+        codigo = {
+            "LIMA": "LIMVMJ02",
+            "CUSCO": "CUSVMJ",
+            "CHICLAYO": "CIXVMJ",
+        }.get(zona, "SELVMJ")
         driver.find_element(By.NAME, "sgE-6972673-1-74").send_keys(codigo)
 
         # Datos personales
@@ -62,7 +68,7 @@ def enviar_formulario_con_driver(driver, registro):
         driver.find_element(By.NAME, "sgE-6972673-1-51").send_keys(registro["Apellido"])
 
         # Zona / fecha
-        if registro["Zona"] == "LIMA":
+        if zona == "LIMA":
             driver.find_element(
                 By.CSS_SELECTOR, 'label[for="sgE-6972673-1-77-10128"]'
             ).click()
@@ -91,11 +97,15 @@ def enviar_formulario_con_driver(driver, registro):
         driver.find_element(By.NAME, "sgE-6972673-1-54").send_keys(registro["Numero"])
 
         # Departamento
+        departamento = {
+            "LIMA": "Lima (departamento)",
+            "CUSCO": "Cusco",
+            "CHICLAYO": "Lambayeque",
+        }.get(zona, "Amazonas")
+
         Select(
             driver.find_element(By.NAME, "sgE-6972673-1-64")
-        ).select_by_visible_text(
-            "Lima (departamento)" if registro["Zona"] == "LIMA" else "Amazonas"
-        )
+        ).select_by_visible_text(departamento)
 
         # Checkboxes
         driver.find_element(
