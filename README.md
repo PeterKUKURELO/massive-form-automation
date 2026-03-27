@@ -1,44 +1,90 @@
 # massive-form-automation
 
-Automatizacion de carga masiva de formularios web a partir de archivos Excel.
+Bulk-submit Excel records into a live web form through a containerized automation pipeline.  
+Built with Next.js, FastAPI, Selenium, and Nginx to validate uploads, process records in controlled batches, and stream execution status in real time.
 
-El proyecto tiene tres piezas principales:
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white)
+![Selenium](https://img.shields.io/badge/Selenium-43B02A?style=flat-square&logo=selenium&logoColor=white)
 
-- `frontend`: interfaz web en Next.js para subir el Excel y ver el progreso.
-- `backend`: API en FastAPI que lee el Excel y ejecuta Selenium.
-- `nginx`: proxy que conecta frontend y backend bajo una sola URL.
+## 💡 Problem
 
-## Stack
+Manual form submission from spreadsheets is slow, repetitive, and error-prone.  
+When teams need to push dozens or hundreds of records into the same external form, they need automation, validation, and visibility, not copy-paste work.
 
-- Frontend: Next.js 15, React 18, TypeScript, Tailwind, shadcn/ui, Framer Motion
-- Backend: FastAPI, Uvicorn, Selenium, Pandas, OpenPyXL
-- Infraestructura: Docker, Docker Compose, Nginx, streaming SSE
+## ⚡ Solution
 
-## Flujo general
+This system turns an `.xlsx` file into a tracked automation job.  
+Users upload the file from a web UI, the backend parses and normalizes each row, Selenium submits the target form, and the frontend receives live SSE updates for progress, success, and failure states.
 
-1. El usuario sube un archivo `.xlsx` desde la web.
-2. El frontend envía el archivo a `POST /api/upload/`.
-3. Nginx redirige `/api/` al backend.
-4. El backend procesa el Excel por lotes.
-5. Selenium abre el formulario, llena los datos y reporta cada resultado en tiempo real.
+## 🚀 Key Features
 
-## Estructura
+- 🚀 Excel upload workflow with `.xlsx` validation
+- 📊 Real-time SSE progress streaming to the UI
+- 🧠 Zone-based business rules for mapping, dates, and derived values
+- ⚙️ Batch execution with throttling and one-driver-per-batch reuse
+- 🌐 Single public URL through Nginx reverse proxy
+- ⚡ Headless Chromium automation inside Docker
+- 🔥 Single-job lock to prevent overlapping runs
+- 🧩 Error capture with optional screenshots on failed submissions
+- 🛠️ Docker-first deployment plus local manual mode
+- 📦 Temporary file storage with cleanup after processing
+
+## 🧩 Architecture
+
+```mermaid
+flowchart LR
+    A[Frontend<br/>Next.js Upload UI] --> B[Nginx Reverse Proxy]
+    B --> C[FastAPI Upload API]
+    C --> D[Excel Parser<br/>Pandas / OpenPyXL]
+    D --> E[Selenium Batch Worker]
+    E --> F[Target Web Form]
+    C --> G[SSE Event Stream]
+    G --> A
+```
+
+- ⚙️ Frontend: Next.js dashboard for file upload, headless toggle, progress bar, live results, and error reporting.
+- ⚙️ Backend: FastAPI upload endpoint, Excel parsing, batch orchestration, Selenium driver lifecycle, and SSE streaming.
+- ⚙️ Proxy: Nginx exposes one entry point, routes `/` to the frontend and `/api/` to FastAPI, and disables buffering for SSE.
+
+## 📊 Processing Flow
+
+`Upload -> Parse -> Normalize -> Automate -> Stream -> Clean Up`
+
+1. Upload an `.xlsx` file from the Next.js UI.
+2. `POST /api/upload/` sends `multipart/form-data` to Nginx.
+3. Nginx forwards the request to FastAPI and keeps SSE buffering disabled.
+4. FastAPI stores the file temporarily and acquires a global processing lock.
+5. Pandas reads the workbook and converts rows into normalized records.
+6. Selenium processes records in batches of `5`, applying zone-specific logic.
+7. The backend streams progress and result events back to the UI.
+8. The frontend updates progress, success/error state, and final status in real time.
+9. The backend removes the uploaded file and releases the lock.
+
+## 🛠️ Tech Stack
+
+- 🛠️ Frontend: Next.js 15, React 18, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion, React Hook Form, Zod
+- 🛠️ Backend: FastAPI, Uvicorn, Selenium, Pandas, OpenPyXL, `python-multipart`
+- 🛠️ Infra: Docker, Docker Compose, Nginx, Chromium, Server-Sent Events, `psutil`
+
+## 📦 Project Structure
 
 ```text
 CamilaProyecto/
 ├── backend/
-│   ├── main.py
-│   ├── selenium_worker.py
-│   ├── excel_reader.py
-│   ├── utils.py
-│   ├── monitor.py
-│   ├── config.py
+│   ├── main.py                # Upload endpoint + SSE response
+│   ├── selenium_worker.py     # Batch automation + zone logic
+│   ├── excel_reader.py        # Excel parsing
+│   ├── utils.py               # Date and email helpers
+│   ├── config.py              # Runtime limits and browser settings
+│   ├── monitor.py             # Resource monitoring / Chrome cleanup
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
 │   ├── app/
 │   ├── components/
-│   ├── excel-processor.tsx
+│   ├── excel-processor.tsx    # Upload UI, progress, results
 │   ├── package.json
 │   └── Dockerfile
 ├── docker-compose.yml
@@ -46,116 +92,45 @@ CamilaProyecto/
 └── README.md
 ```
 
-## Requisitos
+## 🌐 API
 
-### Opcion recomendada
+| Endpoint | Method | Purpose |
+| --- | --- | --- |
+| `/api/upload/` | `POST` | Main public route through Nginx |
+| `/upload/` | `POST` | Direct FastAPI route on port `8000` |
 
-- Docker Desktop corriendo
-- Docker Compose disponible
+- 🌐 Request type: `multipart/form-data`
+- 📦 `file`: Excel file (`.xlsx`)
+- ⚙️ `headless`: `true` or `false`
+- 📊 Response type: `text/event-stream`
+- 🧠 Streamed events: `inicio`, `batch_inicio`, `procesando`, `resultado`, `batch_pausa`, `error`, `error_batch`
+- 🔥 Concurrency behavior: returns `409` if another job is already running
 
-### Opcion local manual
-
-- Python 3.11
-- Node.js 18+
-- Google Chrome o Chromium
-- ChromeDriver compatible
-
-## Ejecucion recomendada con Docker
-
-Desde la raiz del proyecto:
+Example:
 
 ```bash
-docker compose up --build
-```
-
-Cuando los servicios terminen de levantar, entra a:
-
-```text
-http://localhost
-```
-
-URLs utiles:
-
-- App completa: `http://localhost`
-- Frontend directo: `http://localhost:3000`
-- Backend directo: `http://localhost:8000`
-
-Para detener todo:
-
-```bash
-docker compose down
-```
-
-Para ver logs:
-
-```bash
-docker compose logs -f backend
-docker compose logs -f frontend
-docker compose logs -f nginx
-```
-
-## Ejecucion local manual
-
-### Backend
-
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Abrir:
-
-```text
-http://localhost:3000
-```
-
-Nota importante:
-En el estado actual del proyecto, la integracion mas confiable es con Docker + Nginx. El frontend usa `fetch("/api/upload/")`, asi que levantar frontend y backend por separado puede requerir un proxy adicional si no pasas por Nginx.
-
-## API
-
-### `POST /upload/`
-
-Recibe un archivo Excel y devuelve eventos en streaming con el avance del procesamiento.
-
-Parametros:
-
-- `file`: archivo `.xlsx`
-- `headless`: `true` o `false`
-
-Ejemplo con `curl`:
-
-```bash
-curl -X POST "http://localhost:8000/upload/" \
-  -F "file=@archivo.xlsx" \
+curl -X POST "http://localhost/api/upload/" \
+  -F "file=@sample.xlsx" \
   -F "headless=true"
 ```
 
-## Formato esperado del Excel
+<details>
+<summary><strong>📦 Excel Input Contract</strong></summary>
 
-El archivo debe tener estas columnas exactas:
+The backend expects these exact column names:
 
-| Columna | Descripcion |
+| Exact header | Meaning |
 | --- | --- |
-| Nombre | Nombre |
-| Apellido | Apellido |
-| Número Celular | Telefono |
-| Zona | Zona operativa |
-| Es Primer Hijo | `SI` o `NO` |
-| Fecha de Nacimiento | Fecha valida de Excel |
+| `Nombre` | First name |
+| `Apellido` | Last name |
+| `Número Celular` | Phone number |
+| `Zona` | Operational zone |
+| `Es Primer Hijo` | `SI` or `NO` |
+| `Fecha de Nacimiento` | Valid Excel date |
 
-Ejemplo de registros:
+If a header does not match exactly, parsing will fail.
+
+Example rows:
 
 ```csv
 Nombre,Apellido,Número Celular,Zona,Es Primer Hijo,Fecha de Nacimiento
@@ -168,22 +143,12 @@ Thiago,Huaman,987666666,CUSCO,SI,2024-06-18
 Ariana,Soto,987777777,PIURA,NO,2024-07-09
 ```
 
-Encabezados exactos que espera el backend:
+</details>
 
-- `Nombre`
-- `Apellido`
-- `Número Celular`
-- `Zona`
-- `Es Primer Hijo`
-- `Fecha de Nacimiento`
+<details>
+<summary><strong>🧠 Zone Logic and Routing Rules</strong></summary>
 
-Si el nombre de columna no coincide, el backend fallara al leer el archivo.
-
-## Logica actual por zona
-
-El backend normaliza `Zona` en mayusculas y aplica este mapeo:
-
-| Zona | Codigo enviado | Departamento seleccionado |
+| Zone | Submitted code | Selected department |
 | --- | --- | --- |
 | `LIMA` | `LIMVMJ02` | `Lima (departamento)` |
 | `LIMA 2` | `LIMVMJ02` | `Lima (departamento)` |
@@ -196,63 +161,108 @@ El backend normaliza `Zona` en mayusculas y aplica este mapeo:
 | `TRUJILLO 1` | `TRUVMJ` | `La Libertad` |
 | `TRUJILLO 2` | `TRUVMJ2` | `La Libertad` |
 | `SELVA` | `SELVMJ` | `Amazonas` |
-| cualquier otra zona | `SELVMJ` | `Amazonas` |
+| any other zone | `SELVMJ` | `Amazonas` |
 
-Comportamiento adicional:
+Additional rules:
 
-- `LIMA`, `LIMA 2`, `LIMA 3`, `LIMA 4` y `LIMA 6`: generan una fecha aleatoria de 2025 hasta la fecha actual.
-- Otras zonas: usa `Fecha de Nacimiento` del Excel.
-- `LIMA`, `LIMA 2`, `LIMA 3`, `LIMA 4` y `LIMA 6`: siempre marcan la opcion equivalente a primer hijo.
-- Otras zonas: respeta `Es Primer Hijo`.
-- El correo se genera automaticamente como `${numero}@nogmail.com`.
+- 🧠 `LIMA`, `LIMA 2`, `LIMA 3`, `LIMA 4`, and `LIMA 6` generate a random date in `2025` up to today.
+- 🧠 Non-Lima zones use `Fecha de Nacimiento` from the Excel file.
+- 🧠 Lima zones always force the equivalent of the "first child" option.
+- 🧠 Other zones respect the `Es Primer Hijo` value.
+- 🧠 Email is generated automatically as `${Numero}@nogmail.com`.
 
-## Configuracion actual
+</details>
 
-Valores definidos en `backend/config.py`:
+<details>
+<summary><strong>⚙️ Operational Defaults</strong></summary>
 
-- Maximo por carga: `200`
-- Tamano de lote: `5`
-- Pausa entre lotes: `3` segundos
-- Delay entre formularios: `0.1` segundos
-- URL del formulario: `https://survey.alchemer.com/s3/6972673/hospital-program-form`
+- ⚙️ Max records per upload: `200`
+- ⚙️ Batch size: `5`
+- ⚙️ Delay between batches: `3s`
+- ⚙️ Delay between forms: `0.1s`
+- ⚙️ Selenium timeout: `20s`
+- 🌐 Target form: `https://survey.alchemer.com/s3/6972673/hospital-program-form`
+- 📦 Temporary uploads: `backend/excel_files/`
+- ⚡ Success condition: confirmation page contains `Thank You!`
+- 🧩 Failed submissions attempt to save a screenshot in `/app/screenshots`
 
-## Modo headless
+</details>
 
-- `headless=true`: Selenium corre sin mostrar navegador.
-- `headless=false`: Selenium intenta mostrar la ventana del navegador.
+## ⚙️ How to Run
 
-Dentro de Docker, el backend fuerza modo headless con Chromium del contenedor.
+### Docker
 
-## Streaming de resultados
+Recommended path for the most stable setup.
 
-El backend emite eventos como:
+Requirements:
 
-- `inicio`
-- `batch_inicio`
-- `procesando`
-- `resultado`
-- `batch_pausa`
-- `error`
-- `error_batch`
+- Docker Desktop running
+- Docker Compose available
 
-Cada `resultado` incluye:
+Start everything from the project root:
 
-- `index`
-- `nombre`
-- `success`
-- `error` si aplica
+```bash
+docker compose up --build
+```
 
-## Manejo de errores
+Open:
 
-- Si falla un envio, el backend devuelve `success: false`.
-- Intenta guardar un screenshot del error en `SCREENSHOTS_DIR`.
-- Si ya hay un proceso en curso, `POST /upload/` responde `409`.
+- `http://localhost` - full app
+- `http://localhost:3000` - frontend directly
+- `http://localhost:8000` - backend directly
 
-## Monitoreo
+Stop:
 
-Existe un script auxiliar en `backend/monitor.py` para revisar consumo de recursos y limpiar procesos Chrome.
+```bash
+docker compose down
+```
 
-Ejemplos:
+Logs:
+
+```bash
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f nginx
+```
+
+### Local
+
+Requirements:
+
+- Python `3.11`
+- Node.js `18+`
+- Google Chrome or Chromium
+- ChromeDriver compatible with your local browser
+
+Backend:
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open:
+
+- `http://localhost:3000`
+
+Notes:
+
+- ⚙️ The most reliable setup is Docker + Nginx.
+- 🌐 The frontend calls `/api/upload/`, so separate frontend/backend local runs may still need an additional proxy layer.
+- ⚡ Inside Docker, Chromium is forced to run in headless mode.
+
+Optional monitoring:
 
 ```bash
 cd backend
@@ -261,28 +271,30 @@ python monitor.py monitor 60
 python monitor.py clean
 ```
 
-## Notas tecnicas
+## 🔥 Why This Matters
 
-- El frontend y el backend se conectan correctamente cuando pasan por Nginx.
-- El backend procesa un lote reutilizando un mismo driver de Selenium.
-- Los archivos Excel se guardan temporalmente en `backend/excel_files/`.
-- El formulario considera exito cuando encuentra el texto `Thank You!`.
+- 🔥 This project shows real backend orchestration, not just a UI wrapper around a script.
+- ⚙️ It combines file ingestion, normalization, browser automation, reverse proxying, and live event streaming in one workflow.
+- 🧠 It encodes domain rules into deterministic automation paths instead of treating every record the same way.
+- 🌐 It demonstrates practical systems thinking: SSE tuning, containerized execution, temporary storage, and concurrency protection.
+- ⚡ It is strong portfolio evidence for backend, automation, integration, and operational reliability work.
 
-## Archivos clave
+## 🚧 Limitations
 
-- `backend/main.py`: endpoint de carga y streaming SSE
-- `backend/selenium_worker.py`: automatizacion Selenium y logica por zona
-- `backend/excel_reader.py`: lectura del Excel
-- `backend/utils.py`: fechas y correo generado
-- `frontend/excel-processor.tsx`: UI de carga y progreso
-- `nginx.conf`: proxy entre frontend y backend
+- 🚧 Only one active job is supported at a time through an in-memory lock.
+- 🚧 The automation depends on the external form DOM staying stable.
+- 🚧 There is no database or persistent job history yet.
+- 🚧 Failures are reported, but retries are not automated.
+- 🚧 Local split-mode development can require extra proxy configuration.
+- 🚧 Authentication, authorization, and audit trails are not implemented.
 
-## Estado actualizado
+## 🚀 Future Improvements
 
-Este README ya contempla:
-
-- soporte para `LIMA`, `LIMA 2`, `LIMA 3`, `LIMA 4`, `LIMA 6`, `CUSCO`, `CHICLAYO`, `AREQUIPA`, `TRUJILLO 1`, `TRUJILLO 2` y `SELVA`
-- fallback a `SELVMJ` para otras zonas
-- mapeo de departamentos actualizado
-- ejecucion recomendada con Docker
-- formato real del Excel que consume el backend
+- 🚀 Replace the in-memory lock with Redis-backed queues and worker processes.
+- 🚀 Persist jobs, row-level statuses, and artifacts in PostgreSQL or object storage.
+- 🚀 Add retries, dead-letter handling, and resumable batches.
+- 🚀 Scale with worker pools and rate-aware concurrency controls.
+- 🚀 Add health checks, metrics, tracing, and structured logs.
+- 🚀 Move browser execution into a dedicated worker service or grid.
+- 🚀 Add stronger Excel schema validation and pre-flight linting.
+- 🚀 Secure the platform with authentication and role-based access control.
