@@ -101,6 +101,9 @@ curl -X POST "http://localhost:8000/upload/" \
 - `AREQUIPA`: código `AQPVMJ`, departamento `Arequipa`
 - `TRUJILLO 1`: código `TRUVMJ`, departamento `La Libertad`
 - `TRUJILLO 2`: código `TRUVMJ2`, departamento `La Libertad`
+- `HUANCAYO`: código `HCYOVMJ`, departamento `Junín`
+- `ICA`: código `ICAVMJ`, departamento `Ica`
+- `MADRE DE DIOS`: código `MDVMJ`, departamento `Madre de Dios`
 - `SELVA`: código `SELVMJ`, departamento `Amazonas`
 - Otras zonas: fallback a código `SELVMJ` y departamento `Amazonas`
 - Para zonas no Lima, la fecha usa `Fecha de Nacimiento` y respeta `Es Primer Hijo`

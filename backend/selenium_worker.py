@@ -26,6 +26,9 @@ CODIGOS_POR_ZONA = {
     "AREQUIPA": "AQPVMJ",
     "TRUJILLO 1": "TRUVMJ",
     "TRUJILLO 2": "TRUVMJ2",
+    "HUANCAYO": "HCYOVMJ",
+    "ICA": "ICAVMJ",
+    "MADRE DE DIOS": "MDVMJ",
     "SELVA": "SELVMJ",
 }
 
@@ -40,6 +43,9 @@ DEPARTAMENTOS_POR_ZONA = {
     "AREQUIPA": "Arequipa",
     "TRUJILLO 1": "La Libertad",
     "TRUJILLO 2": "La Libertad",
+    "HUANCAYO": "Junín",
+    "ICA": "Ica",
+    "MADRE DE DIOS": "Madre de Dios",
     "SELVA": "Amazonas",
 }
 

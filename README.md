@@ -160,6 +160,9 @@ Ariana,Soto,987777777,PIURA,NO,2024-07-09
 | `AREQUIPA` | `AQPVMJ` | `Arequipa` |
 | `TRUJILLO 1` | `TRUVMJ` | `La Libertad` |
 | `TRUJILLO 2` | `TRUVMJ2` | `La Libertad` |
+| `HUANCAYO` | `HCYOVMJ` | `Junín` |
+| `ICA` | `ICAVMJ` | `Ica` |
+| `MADRE DE DIOS` | `MDVMJ` | `Madre de Dios` |
 | `SELVA` | `SELVMJ` | `Amazonas` |
 | any other zone | `SELVMJ` | `Amazonas` |
 
