@@ -83,7 +83,7 @@ export default function ExcelProcessor() {
         formData.append("file", file)
         formData.append("headless", headless.toString())
 
-        const response = await fetch("/api/upload/", {
+        const response = await fetch("/api/upload", {
             method: "POST",
             body: formData,
         })
